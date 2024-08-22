@@ -1,9 +1,8 @@
--- Creating users with unique email and auto incremented id.
-
-CREATE TABLE IF NOT EXISTS users (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    name VARCHAR(255),
-    country VARCHAR(3) NOT NULL DEFAULT 'US' CHECK (country='US' OR country='CO' OR country='TN')
-
+-- Script that creates a table users following these requirements:
+-- id, email, name, country(enumeration of US, CO and TN)
+CREATE TABLE IF NOT EXISTS users(
+	id int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+	email varchar(255) NOT NULL UNIQUE,
+	name varchar(255),
+	country ENUM('US', 'CO', 'TN') DEFAULT 'US' NOT NULL
 );
