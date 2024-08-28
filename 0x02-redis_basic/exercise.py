@@ -45,7 +45,6 @@ def call_history(method: typing.Callable):
         self._redis.rpush(f"{method_name}:inputs", str(args))
         res = method(self, *args, **kwargs)
         self._redis.rpush(f"{method_name}:outputs", res)
-        return res
     return wrapper
 
 
@@ -61,8 +60,8 @@ class Cache:
                                   decode_responses=True)
         self._redis.flushdb()
 
-    @count_calls
     @call_history
+    @count_calls
     def store(self, data: typing.Union[str, bytes, int, float]) -> str:
         """
         store: method to store a given data by generataing a uuid, as a key
