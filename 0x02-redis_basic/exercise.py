@@ -10,41 +10,41 @@ from functools import wraps
 import redis
 
 
-def count_calls(fn: typing.Callable) -> typing.Callable:
+def count_calls(method: typing.Callable) -> typing.Callable:
     """
     count_calls: function wrappers to count how many times
-        the function fn is called.
+        the function method is called.
     """
-    @wraps(fn)
+    @wraps(method)
     def wrapper(self, *args, **kwargs):
         """
         wrapper function
         """
-        fn_name = fn.__qualname__
-        called_times = self._redis.get(fn_name)
+        method_name = method.__qualname__
+        called_times = self._redis.get(method_name)
         if called_times is None:
-            self._redis.set(fn_name, 1)
+            self._redis.set(method_name, 1)
         else:
-            self._redis.incr(fn_name)
-        return fn(self, *args, **kwargs)
+            self._redis.incr(method_name)
+        return method(self, *args, **kwargs)
 
     return wrapper
 
 
-def call_history(fn: typing.Callable):
+def call_history(method: typing.Callable):
     """
     call_history: stores the input and the output arguments for the function
     to be called
     """
-    @wraps(fn)
+    @wraps(method)
     def wrapper(self, *args, **kwargs):
         """
         wrapper: the main wrapper login
         """
-        fn_name = fn.__qualname__
-        self._redis.rpush(f"{fn_name}:inputs", str(args))
-        res = fn(self, *args, **kwargs)
-        self._redis.rpush(f"{fn_name}:outputs", res)
+        method_name = method.__qualname__
+        self._redis.rpush(f"{method_name}:inputs", str(args))
+        res = method(self, *args, **kwargs)
+        self._redis.rpush(f"{method_name}:outputs", res)
         return res
     return wrapper
 
@@ -61,7 +61,7 @@ class Cache:
                                   decode_responses=True)
         self._redis.flushdb()
 
-    @call_history
+    @count_calls
     def store(self, data: typing.Union[str, bytes, int, float]) -> str:
         """
         store: method to store a given data by generataing a uuid, as a key
@@ -72,16 +72,16 @@ class Cache:
         return key
 
     @count_calls
-    def get(self, key: str, fn: typing.Optional[typing.Callable] = None):
+    def get(self, key: str, method: typing.Optional[typing.Callable] = None):
         """
-        get::(key, fn) -> the basic readed string or fn(readed_string)
+        get::(key, method) -> the basic readed string or method(readed_string)
         """
         data = self._redis.get(key)
         if data is None:
             return data
 
         data = bytes(data, encoding='utf-8')
-        return data if fn is None else fn(data)
+        return data if method is None else method(data)
 
     def get_int(self, key: int):
         """
@@ -95,13 +95,13 @@ class Cache:
         """
         return self.get(key, str)
 
-    def replay(self, fn):
+    def replay(self, method):
         """
         replay: function to replay the cached data of the function.
         """
-        fn_name = fn.__qualname__
-        fn_inputs = self._redis.lrange(f'{fn_name}:inputs', 0, -1)
-        fn_outputs = self._redis.lrange(f'{fn_name}:outputs', 0, -1)
-        print(f"{fn_name} was called {len(fn_inputs)} times:")
-        for inp, outp in zip(fn_inputs, fn_outputs):
-            print(f"{fn_name}(*{inp}) -> {outp}")
+        method_name = method.__qualname__
+        method_inputs = self._redis.lrange(f'{method_name}:inputs', 0, -1)
+        method_outputs = self._redis.lrange(f'{method_name}:outputs', 0, -1)
+        print(f"{method_name} was called {len(method_inputs)} times:")
+        for inp, outp in zip(method_inputs, method_outputs):
+            print(f"{method_name}(*{inp}) -> {outp}")
